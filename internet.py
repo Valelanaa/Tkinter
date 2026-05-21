@@ -18,6 +18,25 @@ ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
 ventana.configure(bg="white")
 
 # =========================
+# IMAGEN SUPERIOR DERECHA
+# =========================
+imagen_logo = tk.PhotoImage(file="udi.png")
+imagen_logo = imagen_logo.subsample(3, 3)
+
+label_logo = tk.Label(
+    ventana,
+    image=imagen_logo,
+    bg="white"
+)
+
+label_logo.place(
+    relx=1.0,
+    y=10,
+    x=-10,
+    anchor="ne"
+)
+
+# =========================
 # VARIABLES
 # =========================
 num1 = tk.StringVar()
