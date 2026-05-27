@@ -53,10 +53,23 @@ class Evidencias:
     # ----------------------------------------------
     lista_evidencias = []
 
-    # ----------------------------------------------
+ # ==================================================
     # CONSTRUCTOR
-    # ----------------------------------------------
-    def __init__(self, id_evidencia, id_estudiante, nombre_estudiante, nombre_evidencia, fecha_carga, path_archivo, descripcion, calificacion=0, estado="No revisado", fecha_revision=""):
+    # ==================================================
+    def __init__(
+        self,
+        id_evidencia,
+        id_estudiante,
+        nombre_estudiante,
+        nombre_evidencia,
+        fecha_carga,
+        path_archivo,
+        descripcion,
+        calificacion=0,
+        estado="No revisado",
+        fecha_revision="",
+        observacion_asesor=""
+    ):
        
         self.id_evidencia = id_evidencia
         self.id_estudiante = id_estudiante
@@ -66,14 +79,11 @@ class Evidencias:
         self.path_archivo = path_archivo
         self.descripcion = descripcion
 
-        # ------------------------------------------
-        # VALORES POR DEFECTO
-        # ------------------------------------------
         self.calificacion = calificacion
         self.estado = estado
         self.fecha_revision = fecha_revision
         
-    
+        self.observacion_asesor = observacion_asesor
 
     # ==================================================
     # MÉTODO INCLUIR EVIDENCIA
@@ -158,7 +168,7 @@ def abrir_archivo_sistema(ruta):
 # VENTANA PRINCIPAL
 # ==================================================
 ventana = tk.Tk()
-ventana.title("Biblioteca UDI")
+ventana.title("Sistema de notas UDI")
 
 ancho = 900
 alto  = 700
@@ -202,7 +212,7 @@ tk.Label(
 # Título centrado
 tk.Label(
     barra_superior,
-    text="Sistema Biblioteca UDI",
+    text="Sistema de notas UDI",
     bg=AZUL_OSCURO, fg=BLANCO, font=("Arial", 22, "bold")
 ).place(relx=0.5, rely=0.38, anchor="center")
 
@@ -267,6 +277,7 @@ def actualizar_grilla():
         grilla.delete(item)
 
     for evidencia in Evidencias.lista_evidencias:
+
         grilla.insert(
             "",
             "end",
@@ -277,12 +288,140 @@ def actualizar_grilla():
                 evidencia.nombre_evidencia,
                 evidencia.fecha_carga,
                 evidencia.descripcion,
-                evidencia.path_archivo,
+                os.path.basename(evidencia.path_archivo),
                 evidencia.calificacion,
                 evidencia.estado,
                 evidencia.fecha_revision
             )
         )
+    
+        # ==========================================
+    # ABRIR VENTANA OBSERVACIONES
+    # ==========================================
+    def abrir_observacion(event=None):
+
+        seleccionado = grilla_obs.selection()
+
+        if not seleccionado:
+            return
+
+        item = seleccionado[0]
+        datos = grilla_obs.item(item, "values")
+
+        id_estudiante = datos[0]
+        nombre_estudiante = datos[1]
+        id_evidencia = int(datos[2])
+
+        evidencia_sel = None
+
+        for evidencia in Evidencias.lista_evidencias:
+
+            if evidencia.id_evidencia == id_evidencia:
+                evidencia_sel = evidencia
+                break
+
+        if evidencia_sel is None:
+            return
+
+        ventana_obs = tk.Toplevel(ventana)
+        ventana_obs.title("Observaciones")
+        ventana_obs.geometry("500x400")
+        ventana_obs.configure(bg=GRIS_FONDO)
+        ventana_obs.resizable(False, False)
+        ventana_obs.grab_set()
+
+        # ==========================================
+        # ID ESTUDIANTE
+        # ==========================================
+        tk.Label(
+            ventana_obs,
+            text="ID Estudiante:",
+            bg=GRIS_FONDO,
+            fg=GRIS_TEXTO,
+            font=("Arial", 10, "bold")
+        ).place(x=30, y=30)
+
+        entry_id = tk.Entry(
+            ventana_obs,
+            width=30,
+            state="readonly",
+            readonlybackground="#E2E8F0"
+        )
+        entry_id.place(x=180, y=30)
+
+        entry_id.config(state="normal")
+        entry_id.insert(0, id_estudiante)
+        entry_id.config(state="readonly")
+
+        # ==========================================
+        # NOMBRE ESTUDIANTE
+        # ==========================================
+        tk.Label(
+            ventana_obs,
+            text="Nombre Estudiante:",
+            bg=GRIS_FONDO,
+            fg=GRIS_TEXTO,
+            font=("Arial", 10, "bold")
+        ).place(x=30, y=80)
+
+        entry_nombre = tk.Entry(
+            ventana_obs,
+            width=30,
+            state="readonly",
+            readonlybackground="#E2E8F0"
+        )
+        entry_nombre.place(x=180, y=80)
+
+        entry_nombre.config(state="normal")
+        entry_nombre.insert(0, nombre_estudiante)
+        entry_nombre.config(state="readonly")
+
+        # ==========================================
+        # ID EVIDENCIA
+        # ==========================================
+        tk.Label(
+            ventana_obs,
+            text="ID Evidencia:",
+            bg=GRIS_FONDO,
+            fg=GRIS_TEXTO,
+            font=("Arial", 10, "bold")
+        ).place(x=30, y=130)
+
+        entry_evidencia = tk.Entry(
+            ventana_obs,
+            width=30,
+            state="readonly",
+            readonlybackground="#E2E8F0"
+        )
+        entry_evidencia.place(x=180, y=130)
+
+        entry_evidencia.config(state="normal")
+        entry_evidencia.insert(0, id_evidencia)
+        entry_evidencia.config(state="readonly")
+
+        # ==========================================
+        # OBSERVACIONES
+        # ==========================================
+        tk.Label(
+            ventana_obs,
+            text="Observaciones:",
+            bg=GRIS_FONDO,
+            fg=GRIS_TEXTO,
+            font=("Arial", 10, "bold")
+        ).place(x=30, y=180)
+
+        text_observaciones = tk.Text(
+            ventana_obs,
+            width=32,
+            height=5
+        )
+        text_observaciones.place(x=180, y=180)
+
+        text_observaciones.insert(
+            "1.0",
+            evidencia_sel.observacion_asesor
+        )
+
 
 
 # ==================================================
@@ -381,14 +520,6 @@ def modificar_evidencia():
     entry_nombre_mod.place(x=170, y=70)
     entry_nombre_mod.insert(0, nombre_actual)
 
-    # Tipo
-    tk.Label(
-        ventana_mod,
-        text="Tipo:",
-        bg=GRIS_FONDO,
-        fg=GRIS_TEXTO,
-        font=("Arial", 10, "bold")
-    ).place(x=30, y=110)
 
 
     # ==========================================
@@ -400,7 +531,7 @@ def modificar_evidencia():
     bg=GRIS_FONDO,
     fg=GRIS_TEXTO,
     font=("Arial", 10, "bold")
-    ).place(x=30, y=150)
+    ).place(x=30,y=150)
 
     # Variable de fecha
     fecha_var = tk.StringVar(value=fecha_actual)
@@ -444,14 +575,14 @@ def modificar_evidencia():
             command=seleccionar_fecha
         ).pack(pady=10)
 
-    # Botón calendario
+    # Botón calendario deshabilitado
     btn_fecha = tk.Button(
     ventana_mod,
     text="📅",
     width=3,
-    bg=AZUL_MEDIO,
-    fg=BLANCO,
-    command=abrir_calendario
+    bg=GRIS_BORDE,
+    fg=NEGRO,
+    state="disabled"
     )
     btn_fecha.place(x=390, y=147)
 
@@ -707,11 +838,7 @@ submenu_estudiantes = tk.Frame(
     bg=AZUL_OSCURO
 )
 
-crear_item(
-    submenu_estudiantes,
-    "• Gestión de Evidencias",
-    subitem=True
-)
+
 
 # ==================================================
 # TUTORES ACADÉMICOS
@@ -730,17 +857,372 @@ submenu_tutores = tk.Frame(
     bg=AZUL_OSCURO
 )
 
-crear_item(
-    submenu_tutores,
-    "• Revisar Evidencias",
-    subitem=True
-)
 
-crear_item(
-    submenu_tutores,
-    "• Informes",
-    subitem=True
-)
+    # ==================================================
+# PANEL OBSERVACIONES ASESOR PEDAGÓGICO
+# ==================================================
+def mostrar_panel_observaciones():
+
+    limpiar_panel()
+
+    panel_obs = tk.Frame(
+        panel_contenido,
+        bg=GRIS_FONDO
+    )
+    panel_obs.pack(fill="both", expand=True)
+
+    # ==================================================
+    # TÍTULO
+    # ==================================================
+    tk.Label(
+        panel_obs,
+        text="Observaciones Asesor Pedagógico",
+        bg=GRIS_FONDO,
+        fg=AZUL_OSCURO,
+        font=("Arial", 18, "bold")
+    ).pack(pady=15)
+
+    # ==================================================
+    # FRAME TABLA
+    # ==================================================
+    frame_tabla = tk.Frame(
+        panel_obs,
+        bg=GRIS_BORDE,
+        bd=1,
+        relief="solid"
+    )
+
+    frame_tabla.pack(
+        fill="both",
+        expand=True,
+        padx=20,
+        pady=10
+    )
+
+    # ==================================================
+    # SCROLLS
+    # ==================================================
+    scroll_y = ttk.Scrollbar(
+        frame_tabla,
+        orient="vertical"
+    )
+    scroll_y.pack(side="right", fill="y")
+
+    scroll_x = ttk.Scrollbar(
+        frame_tabla,
+        orient="horizontal"
+    )
+    scroll_x.pack(side="bottom", fill="x")
+
+    # ==================================================
+    # COLUMNAS
+    # ==================================================
+    columnas = (
+        "id_estudiante",
+        "nombre_estudiante",
+        "id_evidencia",
+        "nombre_evidencia",
+        "observaciones",
+        "fecha_observacion"
+    )
+
+    global grilla_obs
+
+    grilla_obs = ttk.Treeview(
+        frame_tabla,
+        columns=columnas,
+        show="headings",
+        yscrollcommand=scroll_y.set,
+        xscrollcommand=scroll_x.set,
+        style="Grilla.Treeview"
+    )
+
+    grilla_obs.pack(fill="both", expand=True)
+
+    scroll_y.config(command=grilla_obs.yview)
+    scroll_x.config(command=grilla_obs.xview)
+
+    # ==================================================
+    # ENCABEZADOS
+    # ==================================================
+    encabezados = {
+        "id_estudiante": ("ID Estudiante", 120),
+        "nombre_estudiante": ("Nombres Estudiante", 180),
+        "id_evidencia": ("ID Evidencia", 100),
+        "nombre_evidencia": ("Nombre Evidencia", 180),
+        "observaciones": ("Observaciones", 250),
+        "fecha_observacion": ("Fecha Observación", 130),
+    }
+
+    for col, (texto, ancho) in encabezados.items():
+
+        grilla_obs.heading(col, text=texto)
+
+        grilla_obs.column(
+            col,
+            width=ancho,
+            minwidth=50,
+            anchor="w"
+        )
+
+    # ==================================================
+    # DATOS DE EJEMPLO
+    # ==================================================
+    for evidencia in Evidencias.lista_evidencias:
+        grilla_obs.insert(
+            "",
+            "end",
+            values=(
+                evidencia.id_estudiante,
+                evidencia.nombre_estudiante,
+                evidencia.id_evidencia,
+                evidencia.nombre_evidencia,
+                evidencia.observacion_asesor,
+                evidencia.fecha_revision
+            )
+        )
+
+    # ==========================================
+    # VENTANA EMERGENTE OBSERVACIONES
+    # ==========================================
+    def abrir_observacion(event=None):
+
+        item = None
+
+        if event is not None:
+            region = grilla_obs.identify("region", event.x, event.y)
+            columna = grilla_obs.identify_column(event.x)
+            fila = grilla_obs.identify_row(event.y)
+
+            # Abrir solo al hacer click en la columna "Nombre Evidencia"
+            if region != "cell" or columna != "#4" or not fila:
+                return
+
+            grilla_obs.selection_set(fila)
+            item = fila
+        else:
+            seleccionado = grilla_obs.selection()
+            if not seleccionado:
+                return
+            item = seleccionado[0]
+
+        datos = grilla_obs.item(item, "values")
+
+        id_estudiante = datos[0]
+        nombre_estudiante = datos[1]
+        id_evidencia = int(datos[2])
+        nombre_evidencia = datos[3]
+
+        evidencia_sel = None
+        for evidencia in Evidencias.lista_evidencias:
+            if evidencia.id_evidencia == id_evidencia:
+                evidencia_sel = evidencia
+                break
+
+        if evidencia_sel is None:
+            return
+
+        # ==========================================
+        # VENTANA
+        # ==========================================
+        ventana_obs = tk.Toplevel(ventana)
+        ventana_obs.title("Observaciones")
+        ventana_obs.geometry("500x420")
+        ventana_obs.configure(bg=GRIS_FONDO)
+        ventana_obs.resizable(False, False)
+        ventana_obs.grab_set()
+
+        # ==========================================
+        # ID ESTUDIANTE
+        # ==========================================
+        tk.Label(
+            ventana_obs,
+            text="ID Estudiante:",
+            bg=GRIS_FONDO,
+            fg=GRIS_TEXTO,
+            font=("Arial", 10, "bold")
+        ).place(x=30, y=40)
+
+        entry_id = tk.Entry(
+            ventana_obs,
+            width=35,
+            state="readonly",
+            readonlybackground="#E2E8F0"
+        )
+        entry_id.place(x=180, y=40)
+        entry_id.config(state="normal")
+        entry_id.insert(0, id_estudiante)
+        entry_id.config(state="readonly")
+
+        # ==========================================
+        # NOMBRE ESTUDIANTE
+        # ==========================================
+        tk.Label(
+            ventana_obs,
+            text="Nombre Estudiante:",
+            bg=GRIS_FONDO,
+            fg=GRIS_TEXTO,
+            font=("Arial", 10, "bold")
+        ).place(x=30, y=90)
+
+        entry_nombre = tk.Entry(
+            ventana_obs,
+            width=35,
+            state="readonly",
+            readonlybackground="#E2E8F0"
+        )
+        entry_nombre.place(x=180, y=90)
+        entry_nombre.config(state="normal")
+        entry_nombre.insert(0, nombre_estudiante)
+        entry_nombre.config(state="readonly")
+
+        # ==========================================
+        # ID EVIDENCIA
+        # ==========================================
+        tk.Label(
+            ventana_obs,
+            text="ID Evidencia:",
+            bg=GRIS_FONDO,
+            fg=GRIS_TEXTO,
+            font=("Arial", 10, "bold")
+        ).place(x=30, y=140)
+
+        entry_evidencia = tk.Entry(
+            ventana_obs,
+            width=35,
+            state="readonly",
+            readonlybackground="#E2E8F0"
+        )
+        entry_evidencia.place(x=180, y=140)
+        entry_evidencia.config(state="normal")
+        entry_evidencia.insert(0, id_evidencia)
+        entry_evidencia.config(state="readonly")
+
+        # ==========================================
+        # NOMBRE EVIDENCIA
+        # ==========================================
+        tk.Label(
+            ventana_obs,
+            text="Nombre Evidencia:",
+            bg=GRIS_FONDO,
+            fg=GRIS_TEXTO,
+            font=("Arial", 10, "bold")
+        ).place(x=30, y=190)
+
+        entry_nom_ev = tk.Entry(
+            ventana_obs,
+            width=35,
+            state="readonly",
+            readonlybackground="#E2E8F0"
+        )
+        entry_nom_ev.place(x=180, y=190)
+        entry_nom_ev.config(state="normal")
+        entry_nom_ev.insert(0, nombre_evidencia)
+        entry_nom_ev.config(state="readonly")
+
+        # ==========================================
+        # OBSERVACIONES
+        # ==========================================
+        tk.Label(
+            ventana_obs,
+            text="Observaciones:",
+            bg=GRIS_FONDO,
+            fg=GRIS_TEXTO,
+            font=("Arial", 10, "bold")
+        ).place(x=30, y=240)
+
+        text_observaciones = tk.Text(
+            ventana_obs,
+            width=32,
+            height=5,
+            font=("Arial", 10)
+        )
+        text_observaciones.place(x=180, y=240)
+        text_observaciones.insert("1.0", evidencia_sel.observacion_asesor)
+
+        # ==========================================
+        # BOTÓN CANCELAR
+        # ==========================================
+        tk.Button(
+            ventana_obs,
+            text="Cancelar",
+            bg=GRIS_BORDE,
+            fg=NEGRO,
+            width=12,
+            command=ventana_obs.destroy
+        ).place(x=110, y=360)
+
+        # ==========================================
+        # BOTÓN ACEPTAR
+        # ==========================================
+        def aceptar_observacion():
+            observacion = text_observaciones.get("1.0", tk.END).strip()
+            evidencia_sel.observacion_asesor = observacion
+            evidencia_sel.fecha_revision = datetime.now().strftime("%d/%m/%Y")
+            actualizar_grilla()
+            mostrar_panel_observaciones()
+            messagebox.showinfo(
+                "Observación",
+                "Observación registrada correctamente"
+            )
+            ventana_obs.destroy()
+
+        tk.Button(
+            ventana_obs,
+            text="Aceptar",
+            bg=VERDE,
+            fg=BLANCO,
+            width=12,
+            command=aceptar_observacion
+        ).place(x=280, y=360)
+
+    # ==========================================
+    # EVENTO CLICK EN LA TABLA
+    # ==========================================
+    grilla_obs.bind("<ButtonRelease-1>", abrir_observacion)
+
+    # ==================================================
+    # BARRA BOTONES
+    # ==================================================
+    barra_botones = tk.Frame(
+        panel_obs,
+        bg=GRIS_FONDO
+    )
+
+    barra_botones.pack(
+        fill="x",
+        padx=20,
+        pady=(0, 12)
+        )
+
+    # ==================================================
+    # BOTÓN CANCELAR
+    # ==================================================
+    tk.Button(
+        barra_botones,
+        text="Cancelar",
+        bg=GRIS_BORDE,
+        fg=NEGRO,
+        font=("Arial", 10, "bold"),
+        relief="flat",
+        padx=18,
+        pady=6
+    ).pack(side="left")
+
+# ==================================================
+    # BOTÓN SALIR
+# ==================================================
+    tk.Button(
+        barra_botones,
+        text="Salir",
+        bg=ROJO,
+        fg=BLANCO,
+        font=("Arial", 10, "bold"),
+        relief="flat",
+        padx=18,
+        pady=6,
+        command=mostrar_panel_estudiantes
+    ).pack(side="right")
 
 # ==================================================
 # ASESORES PEDAGÓGICOS
@@ -762,8 +1244,11 @@ submenu_asesores = tk.Frame(
 crear_item(
     submenu_asesores,
     "• Observaciones",
-    subitem=True
+    subitem=True,
+    comando=mostrar_panel_observaciones
 )
+
+submenu_asesores.pack(fill="x")
 
 # ==================================================
 # ESPACIO FLEXIBLE
@@ -925,6 +1410,13 @@ def mostrar_panel_estudiantes():
         wrap="word"
     )
     text_descripcion.pack(padx=1, pady=1)
+    # ==================================================
+    # BLOQUEAR CAMPOS INICIALMENTE
+    # ==================================================
+    entry_id_estudiante.config(state="disabled")
+    entry_nombre_estudiante.config(state="disabled")
+    entry_nombre.config(state="disabled")
+    text_descripcion.config(state="disabled")
 
     # ==================================================
     # FECHA (BLOQUEADA)
@@ -1077,25 +1569,41 @@ def mostrar_panel_estudiantes():
     # ==================================================
     # NUEVA EVIDENCIA
     # ==================================================
+    # ==================================================
+    # NUEVA EVIDENCIA
+    # ==================================================
     def nueva_evidencia_form():
+
         nonlocal ruta_archivo
+
+        entry_id_estudiante.config(state="normal")
+        entry_nombre_estudiante.config(state="normal")
+        entry_nombre.config(state="normal")
+        text_descripcion.config(state="normal")
 
         entry_id_estudiante.delete(0, tk.END)
         entry_nombre_estudiante.delete(0, tk.END)
         entry_nombre.delete(0, tk.END)
+
         text_descripcion.delete("1.0", tk.END)
+
         ruta_archivo = ""
 
         fecha_actual = datetime.now().strftime("%d/%m/%Y")
+
         entry_fecha.config(state="normal")
         entry_fecha.delete(0, tk.END)
         entry_fecha.insert(0, fecha_actual)
         entry_fecha.config(state="readonly")
 
+        entry_id_estudiante.focus_set()
+
+
     # ==================================================
     # ACEPTAR EVIDENCIA
     # ==================================================
     def aceptar_evidencia():
+
         nonlocal ruta_archivo
         global contador_id_evidencia
 
@@ -1106,18 +1614,18 @@ def mostrar_panel_estudiantes():
         descripcion = text_descripcion.get("1.0", tk.END).strip()
 
         if id_estudiante == "":
-            messagebox.showwarning(
-                "Validación",
-                "Ingrese el ID del estudiante"
-            )
-            return
+                messagebox.showwarning(
+                    "Validación",
+                    "Ingrese el ID del estudiante"
+                )
+                return
 
         if nombre_estudiante == "":
-            messagebox.showwarning(
-                "Validación",
-                "Ingrese el nombre del estudiante"
-            )
-            return
+                messagebox.showwarning(
+                    "Validación",
+                    "Ingrese el nombre del estudiante"
+                )
+                return
 
         if nombre_evidencia == "":
             messagebox.showwarning(
@@ -1127,25 +1635,25 @@ def mostrar_panel_estudiantes():
             return
 
         if ruta_archivo == "":
-            messagebox.showwarning(
-                "Validación",
-                "Debe cargar un archivo"
-            )
-            return
+                messagebox.showwarning(
+                    "Validación",
+                    "Debe cargar un archivo"
+                )
+                return
 
         if not extension_evidencia_valida(ruta_archivo):
-            messagebox.showwarning(
-                "Formato no permitido",
-                "Solo se admiten archivos PDF, Word (.doc, .docx) o Excel (.xls, .xlsx)."
-            )
-            return
+                messagebox.showwarning(
+                    "Formato no permitido",
+                    "Solo se admiten archivos PDF, Word (.doc, .docx) o Excel (.xls, .xlsx)."
+                )
+                return
 
         nueva_evidencia = Evidencias(
             contador_id_evidencia,
             id_estudiante,
             nombre_estudiante,
             nombre_evidencia,
-            fecha_registro,
+                fecha_registro,
             ruta_archivo,
             descripcion
         )
@@ -1159,7 +1667,16 @@ def mostrar_panel_estudiantes():
             "Evidencia registrada correctamente"
         )
 
+            # Limpiar formulario
         nueva_evidencia_form()
+
+            # ==========================================
+            # BLOQUEAR CAMPOS NUEVAMENTE
+            # ==========================================
+        entry_id_estudiante.config(state="disabled")
+        entry_nombre_estudiante.config(state="disabled")
+        entry_nombre.config(state="disabled")
+        text_descripcion.config(state="disabled")
 
     # --------------------------------------------------
     # BARRA DE ACCIONES
@@ -1170,7 +1687,7 @@ def mostrar_panel_estudiantes():
     barra_acciones.pack(fill="x")
 
     botones_acciones = [
-        ("Cancelar", GRIS_BORDE, NEGRO, nueva_evidencia_form),
+        ("Cancelar", GRIS_BORDE, NEGRO, limpiar_panel),
         ("Nueva Evidencia", AZUL_MEDIO, BLANCO, nueva_evidencia_form),
         ("Modificar", AZUL_OSCURO, BLANCO, modificar_evidencia),
         ("Eliminar", ROJO, BLANCO, eliminar_evidencia),
@@ -1195,12 +1712,19 @@ def mostrar_panel_estudiantes():
 
     actualizar_grilla()
 
-# ==================================================
+crear_item(
+    submenu_estudiantes,
+    "• Gestión de Evidencias",
+    subitem=True,
+    comando=mostrar_panel_estudiantes
+)
+
+    # ==================================================
 # INFORME: BARRAS ID ESTUDIANTE vs NOTA
-# ==================================================
+    # ==================================================
 def abrir_informe_notas_por_estudiante():
 
-    notas_por_estudiante = {}
+    datos = []
 
     for ev in Evidencias.lista_evidencias:
         try:
@@ -1210,24 +1734,19 @@ def abrir_informe_notas_por_estudiante():
         if math.isnan(nota):
             continue
 
-        id_est = str(ev.id_estudiante)
-        if id_est not in notas_por_estudiante:
-            notas_por_estudiante[id_est] = []
-        notas_por_estudiante[id_est].append(nota)
+        id_est = str(ev.id_estudiante).strip()
+        id_ev = ev.id_evidencia if ev.id_evidencia is not None else 0
+        datos.append((id_est, nota, id_ev))
 
-    if not notas_por_estudiante:
+    if not datos:
         messagebox.showinfo(
             "Informe",
             "No hay notas numéricas para mostrar. Asigne notas al revisar evidencias."
         )
         return
 
-    # Una barra por estudiante: promedio de sus notas
-    datos = []
-    for id_est in sorted(notas_por_estudiante.keys(), key=lambda x: (not x.isdigit(), x)):
-        notas = notas_por_estudiante[id_est]
-        promedio = sum(notas) / len(notas)
-        datos.append((id_est, round(promedio, 2)))
+    # Una barra por evidencia; eje X mantiene el ID del estudiante
+    datos.sort(key=lambda x: (not x[0].isdigit(), x[0], x[2]))
 
     win = tk.Toplevel(ventana)
     win.title("Informe: nota por ID de estudiante")
@@ -1237,7 +1756,7 @@ def abrir_informe_notas_por_estudiante():
 
     tk.Label(
         win,
-        text="Promedio de notas por ID de estudiante",
+        text="Notas por evidencia (ID estudiante en eje X)",
         bg=GRIS_FONDO,
         fg=AZUL_OSCURO,
         font=("Arial", 14, "bold")
@@ -1260,7 +1779,7 @@ def abrir_informe_notas_por_estudiante():
     )
     canvas.pack(padx=20, pady=10)
 
-    y_max = max(5.0, max(n for _, n in datos))
+    y_max = max(5.0, max(nota for _, nota, _ in datos))
     plot_w = ancho_c - margen_izq - margen_der
     plot_h = alto_c - margen_sup - margen_inf
     n = len(datos)
@@ -1305,7 +1824,7 @@ def abrir_informe_notas_por_estudiante():
             fill=GRIS_TEXTO
         )
 
-    for i, (id_est, nota) in enumerate(datos):
+    for i, (id_est, nota, _) in enumerate(datos):
         cx = margen_izq + (i + 0.5) * paso
         x_bar_i = cx - ancho_barra / 2
         altura = (nota / y_max) * plot_h
@@ -1352,6 +1871,9 @@ def abrir_informe_notas_por_estudiante():
 # PANEL REVISAR EVIDENCIAS
 # ==================================================
 def revisar_evidencias():
+    
+    global submenu_estudiantes, submenu_tutores
+
 
     limpiar_panel()
 
@@ -1499,9 +2021,10 @@ def revisar_evidencias():
     cargar_tabla_revision()
 
     ventana_revision_abierta = {"widget": None}
+    
+
 
     def crear_campo_bloqueado(parent, etiqueta, valor, y, ancho=40):
-
         tk.Label(
             parent,
             text=etiqueta,
@@ -1627,7 +2150,7 @@ def revisar_evidencias():
             highlightbackground=GRIS_BORDE
         )
         text_observaciones.place(x=180, y=150)
-        text_observaciones.insert("1.0", evidencia_sel.descripcion)
+        text_observaciones.insert("1.0", evidencia_sel.observacion_asesor)
         text_observaciones.config(state="disabled")
 
         tk.Label(
@@ -1675,7 +2198,7 @@ def revisar_evidencias():
         combo_estado = ttk.Combobox(
             ventana_rev,
             values=["Revisado", "No revisado"],
-            state="readonly",
+            state="disabled",
             width=18
         )
         combo_estado.place(x=180, y=290)
@@ -1688,7 +2211,7 @@ def revisar_evidencias():
         def aceptar_revision():
 
             nota_texto = entry_nota.get().strip()
-            estado = combo_estado.get().strip()
+        
 
             if nota_texto == "":
                 messagebox.showwarning(
@@ -1704,16 +2227,20 @@ def revisar_evidencias():
                     "La nota debe estar entre 0 y 5"
                 )
                 return
-
-            if estado == "":
-                messagebox.showwarning(
-                    "Validación",
-                    "Seleccione el estado"
-                )
-                return
+            # ==========================================
+# CAMBIAR ESTADO AUTOMÁTICAMENTE
+# ==========================================
+            if nota_texto != "":
+                estado = "Revisado"
+            else:
+                estado = "No revisado"
 
             evidencia_sel.calificacion = nota
             evidencia_sel.estado = estado
+            evidencia_sel.fecha_revision = datetime.now().strftime("%d/%m/%Y")  
+                        
+
+            
             evidencia_sel.fecha_revision = datetime.now().strftime("%d/%m/%Y")
 
             actualizar_grilla()
@@ -1723,7 +2250,6 @@ def revisar_evidencias():
                 "Revisión",
                 "Evidencia revisada correctamente"
             )
-
             cerrar_ventana()
 
         tk.Button(
@@ -1747,37 +2273,8 @@ def revisar_evidencias():
     tabla.bind("<<TreeviewSelect>>", abrir_ventana_revision)
 
 # ==================================================
-# MOSTRAR PANEL INICIAL
+# OPCIÓN MENÚ REVISAR EVIDENCIAS
 # ==================================================
-mostrar_panel_estudiantes()
-
-# ==================================================
-# ACTUALIZAR MENÚ ESTUDIANTES
-# ==================================================
-submenu_estudiantes.destroy()
-
-submenu_estudiantes = tk.Frame(
-    contenedor_estudiantes,
-    bg=AZUL_OSCURO
-)
-
-crear_item(
-    submenu_estudiantes,
-    "• Gestión de Evidencias",
-    subitem=True,
-    comando=mostrar_panel_estudiantes
-)
-
-# ==================================================
-# ACTUALIZAR MENÚ TUTORES
-# ==================================================
-submenu_tutores.destroy()
-
-submenu_tutores = tk.Frame(
-    contenedor_tutores,
-    bg=AZUL_OSCURO
-)
-
 crear_item(
     submenu_tutores,
     "• Revisar Evidencias",
@@ -1785,10 +2282,27 @@ crear_item(
     comando=revisar_evidencias
 )
 
-crear_item(
-    submenu_tutores,
-    "• Informes",
-    subitem=True
-)
 
+# ==================================================
+# FUNCIÓN TECLA ESC PARA SALIR
+# ==================================================
+def salir_con_esc(event=None):
+
+    respuesta = messagebox.askyesno(
+        "Salir",
+        "¿Desea salir del programa?"
+    )
+
+    if respuesta:
+        ventana.destroy()
+
+# ==================================================
+# ASIGNAR TECLA ESC
+# ==================================================
+ventana.bind("<Escape>", salir_con_esc)
+
+# ==================================================
+# MOSTRAR PANEL INICIAL
+# ==================================================
+mostrar_panel_estudiantes()
 ventana.mainloop()
