@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 import subprocess
 import sys
+import math
 from tkcalendar import Calendar #Para que al modificar la fecha salga un calendario
 from PIL import Image, ImageTk #para la imagen del logo 
 
@@ -20,6 +21,27 @@ GRIS_TEXTO    = "#4A5568"
 NEGRO         = "#1A202C"
 ROJO          = "#C0392B"
 VERDE         = "#1E6E3B"
+
+# ==================================================
+# FORMATOS DE EVIDENCIA (solo PDF, Word, Excel)
+# ==================================================
+EXTENSIONES_EVIDENCIA = {".pdf", ".doc", ".docx", ".xls", ".xlsx"}
+
+FILETYPES_EVIDENCIA = [
+    ("PDF (*.pdf)", "*.pdf"),
+    ("Word (*.doc; *.docx)", "*.doc;*.docx"),
+    ("Excel (*.xls; *.xlsx)", "*.xls;*.xlsx"),
+]
+
+
+def extension_evidencia_valida(ruta):
+
+    if not ruta:
+        return False
+
+    ext = os.path.splitext(ruta)[1].lower()
+
+    return ext in EXTENSIONES_EVIDENCIA
 
 # ==================================================
 # CLASE EVIDENCIAS
@@ -471,10 +493,18 @@ def modificar_evidencia():
     # ==========================================
     def cargar_archivo_mod():
         archivo = filedialog.askopenfilename(
-            title="Seleccionar archivo"
+            title="Seleccionar archivo (PDF, Word o Excel)",
+            filetypes=FILETYPES_EVIDENCIA
         )
 
         if archivo:
+            if not extension_evidencia_valida(archivo):
+                messagebox.showwarning(
+                    "Formato no permitido",
+                    "Solo se admiten archivos PDF, Word (.doc, .docx) o Excel (.xls, .xlsx)."
+                )
+                return
+
             ruta_modificada.set(archivo)
 
     tk.Button(
@@ -499,6 +529,13 @@ def modificar_evidencia():
             messagebox.showwarning(
                 "Validación",
                 "Ingrese el nombre"
+            )
+            return
+
+        if nuevo_archivo and not extension_evidencia_valida(nuevo_archivo):
+            messagebox.showwarning(
+                "Formato no permitido",
+                "Solo se admiten archivos PDF, Word (.doc, .docx) o Excel (.xls, .xlsx)."
             )
             return
 
@@ -925,16 +962,18 @@ def mostrar_panel_estudiantes():
         nonlocal ruta_archivo
 
         archivo = filedialog.askopenfilename(
-            title="Seleccionar evidencia",
-            filetypes=[
-                ("Archivos PDF", "*.pdf"),
-                ("Archivos Word", "*.docx"),
-                ("Archivos Excel", "*.xlsx"),
-                ("Todos los archivos", "*.*")
-            ]
+            title="Seleccionar evidencia (PDF, Word o Excel)",
+            filetypes=FILETYPES_EVIDENCIA
         )
 
         if archivo:
+            if not extension_evidencia_valida(archivo):
+                messagebox.showwarning(
+                    "Formato no permitido",
+                    "Solo se admiten archivos PDF, Word (.doc, .docx) o Excel (.xls, .xlsx)."
+                )
+                return
+
             ruta_archivo = archivo
             messagebox.showinfo(
                 "Archivo seleccionado",
@@ -1094,6 +1133,13 @@ def mostrar_panel_estudiantes():
             )
             return
 
+        if not extension_evidencia_valida(ruta_archivo):
+            messagebox.showwarning(
+                "Formato no permitido",
+                "Solo se admiten archivos PDF, Word (.doc, .docx) o Excel (.xls, .xlsx)."
+            )
+            return
+
         nueva_evidencia = Evidencias(
             contador_id_evidencia,
             id_estudiante,
@@ -1150,6 +1196,159 @@ def mostrar_panel_estudiantes():
     actualizar_grilla()
 
 # ==================================================
+# INFORME: BARRAS ID ESTUDIANTE vs NOTA
+# ==================================================
+def abrir_informe_notas_por_estudiante():
+
+    notas_por_estudiante = {}
+
+    for ev in Evidencias.lista_evidencias:
+        try:
+            nota = float(ev.calificacion)
+        except (TypeError, ValueError):
+            continue
+        if math.isnan(nota):
+            continue
+
+        id_est = str(ev.id_estudiante)
+        if id_est not in notas_por_estudiante:
+            notas_por_estudiante[id_est] = []
+        notas_por_estudiante[id_est].append(nota)
+
+    if not notas_por_estudiante:
+        messagebox.showinfo(
+            "Informe",
+            "No hay notas numéricas para mostrar. Asigne notas al revisar evidencias."
+        )
+        return
+
+    # Una barra por estudiante: promedio de sus notas
+    datos = []
+    for id_est in sorted(notas_por_estudiante.keys(), key=lambda x: (not x.isdigit(), x)):
+        notas = notas_por_estudiante[id_est]
+        promedio = sum(notas) / len(notas)
+        datos.append((id_est, round(promedio, 2)))
+
+    win = tk.Toplevel(ventana)
+    win.title("Informe: nota por ID de estudiante")
+    win.geometry("760x520")
+    win.configure(bg=GRIS_FONDO)
+    win.transient(ventana)
+
+    tk.Label(
+        win,
+        text="Promedio de notas por ID de estudiante",
+        bg=GRIS_FONDO,
+        fg=AZUL_OSCURO,
+        font=("Arial", 14, "bold")
+    ).pack(pady=(12, 6))
+
+    ancho_c = 700
+    alto_c = 400
+    margen_izq = 55
+    margen_der = 25
+    margen_sup = 25
+    margen_inf = 70
+
+    canvas = tk.Canvas(
+        win,
+        width=ancho_c,
+        height=alto_c,
+        bg=BLANCO,
+        highlightthickness=1,
+        highlightbackground=GRIS_BORDE
+    )
+    canvas.pack(padx=20, pady=10)
+
+    y_max = max(5.0, max(n for _, n in datos))
+    plot_w = ancho_c - margen_izq - margen_der
+    plot_h = alto_c - margen_sup - margen_inf
+    n = len(datos)
+    paso = plot_w / max(n, 1)
+    ancho_barra = min(paso * 0.72, 80)
+
+    # Ejes
+    x0 = margen_izq
+    y0 = alto_c - margen_inf
+    x1 = ancho_c - margen_der
+    y1 = margen_sup
+    canvas.create_line(x0, y0, x1, y0, fill=NEGRO, width=2)
+    canvas.create_line(x0, y0, x0, y1, fill=NEGRO, width=2)
+
+    canvas.create_text(
+        ancho_c // 2,
+        alto_c - 28,
+        text="ID estudiante",
+        font=("Arial", 11, "bold"),
+        fill=GRIS_TEXTO
+    )
+    canvas.create_text(
+        18,
+        margen_sup + plot_h // 2,
+        text="Nota",
+        font=("Arial", 11, "bold"),
+        fill=GRIS_TEXTO,
+        angle=90
+    )
+
+    for t in (0, 1, 2, 3, 4, 5):
+        if t > y_max:
+            continue
+        yy = y0 - (t / y_max) * plot_h
+        canvas.create_line(x0 - 4, yy, x0, yy, fill=GRIS_BORDE)
+        canvas.create_text(
+            x0 - 10,
+            yy,
+            text=str(t),
+            font=("Arial", 9),
+            anchor="e",
+            fill=GRIS_TEXTO
+        )
+
+    for i, (id_est, nota) in enumerate(datos):
+        cx = margen_izq + (i + 0.5) * paso
+        x_bar_i = cx - ancho_barra / 2
+        altura = (nota / y_max) * plot_h
+        y_bar = y0 - altura
+        canvas.create_rectangle(
+            x_bar_i,
+            y_bar,
+            x_bar_i + ancho_barra,
+            y0,
+            fill=AZUL_MEDIO,
+            outline=AZUL_OSCURO,
+            width=1
+        )
+        canvas.create_text(
+            cx,
+            y_bar - 10,
+            text=f"{nota:g}",
+            font=("Arial", 9, "bold"),
+            fill=AZUL_OSCURO
+        )
+        etiqueta = id_est if len(id_est) <= 10 else id_est[:9] + "…"
+        canvas.create_text(
+            cx,
+            y0 + 14,
+            text=etiqueta,
+            font=("Arial", 8),
+            fill=GRIS_TEXTO,
+            angle=45,
+            anchor="nw"
+        )
+
+    tk.Button(
+        win,
+        text="Cerrar",
+        bg=AZUL_OSCURO,
+        fg=BLANCO,
+        font=("Arial", 10),
+        padx=20,
+        pady=6,
+        command=win.destroy
+    ).pack(pady=(0, 14))
+
+# ==================================================
 # PANEL REVISAR EVIDENCIAS
 # ==================================================
 def revisar_evidencias():
@@ -1172,6 +1371,7 @@ def revisar_evidencias():
 
     columnas = (
         "id",
+        "id_estudiante",
         "estudiante",
         "evidencia",
         "fecha",
@@ -1216,10 +1416,57 @@ def revisar_evidencias():
     scroll_vertical.pack(side="right", fill="y")
     scroll_horizontal.pack(side="bottom", fill="x")
 
+    # --------------------------------------------------
+    # Botones inferiores: Salir | Informe
+    # --------------------------------------------------
+    frame_botones_revision = tk.Frame(
+        panel_revision,
+        bg=GRIS_FONDO,
+        height=52
+    )
+    frame_botones_revision.pack(
+        side="bottom",
+        fill="x",
+        padx=10,
+        pady=(0, 12)
+    )
+    frame_botones_revision.pack_propagate(False)
+
+    tk.Button(
+        frame_botones_revision,
+        text="Salir",
+        bg=ROJO,
+        fg=BLANCO,
+        font=("Arial", 10, "bold"),
+        relief="flat",
+        padx=18,
+        pady=8,
+        cursor="hand2",
+        activebackground="#A93226",
+        activeforeground=BLANCO,
+        command=mostrar_panel_estudiantes
+    ).pack(side="left", anchor="sw")
+
+    tk.Button(
+        frame_botones_revision,
+        text="Informe",
+        bg=AZUL_MEDIO,
+        fg=BLANCO,
+        font=("Arial", 10, "bold"),
+        relief="flat",
+        padx=18,
+        pady=8,
+        cursor="hand2",
+        activebackground=AZUL_OSCURO,
+        activeforeground=BLANCO,
+        command=abrir_informe_notas_por_estudiante
+    ).pack(side="right", anchor="se")
+
     encabezados = {
-        "id": ("ID", 60),
-        "estudiante": ("Estudiante", 180),
-        "evidencia": ("Evidencia", 180),
+        "id": ("ID Evidencia", 90),
+        "id_estudiante": ("ID Estudiante", 110),
+        "estudiante": ("Estudiante", 160),
+        "evidencia": ("Evidencia", 160),
         "fecha": ("Fecha", 100),
         "estado": ("Estado", 120),
         "nota": ("Nota", 80)
@@ -1240,6 +1487,7 @@ def revisar_evidencias():
                 "end",
                 values=(
                     evidencia.id_evidencia,
+                    evidencia.id_estudiante,
                     evidencia.nombre_estudiante,
                     evidencia.nombre_evidencia,
                     evidencia.fecha_carga,
